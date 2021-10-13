@@ -23,7 +23,7 @@ jobs:
 
       - name: npm install, build, and test
         run: |
-          npm install --production
+          npm install
           npm run cibuild --verbose
           npm run test --if-present
         working-directory: ./API
