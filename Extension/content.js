@@ -11,9 +11,21 @@ function sendGetRequest(url) {
     }
 };
 
+function getHash(urlStr) {
+    var hash = 0;
+    if (urlStr.length == 0) return hash;
+    for (i = 0 ;i<urlStr.length ; i++)
+    {
+        ch = urlStr.charCodeAt(i);
+        hash = ((hash << 5) - hash) + ch;
+        hash = hash & hash;
+    }
+    return hash;
+};
+
 function sendPostRequest(data) {
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", g_baseUrl+g_postPath);
+    xhr.open("POST", g_baseUrl+g_postPath+String(data.url)+"/"+String(data.position));
     xhr.setRequestHeader("Accept", "application/json");
     xhr.setRequestHeader("Content-Type", "application/json");
 
@@ -24,7 +36,7 @@ function sendPostRequest(data) {
     }};
 
     console.log(data);
-    xhr.send(data);
+    xhr.send();
 }
 
 $(window).on('load', function() {
@@ -36,8 +48,9 @@ $(window).on('load', function() {
 
     var currScrollY = 0;
     var prevScrollY = 0;
-    
-    sendGetRequest(url);
+    var urlHash = getHash(url);
+    console.log("urlHash ", urlHash);
+    sendGetRequest(urlHash);
     
     // check if it is o365 app
     var isOfficeApp = false;
@@ -79,7 +92,7 @@ $(window).on('load', function() {
                     console.log("Scroll to: ", $("#EditingThumbnailsPanel").scrollTop());
                     currScrollY = $("#EditingThumbnailsPanel").scrollTop();
                     var data = {
-                        "url": url,
+                        "url": urlHash,
                         "position": currScrollY
                     };
                     sendPostRequest(data);
@@ -114,7 +127,7 @@ $(window).on('load', function() {
                     currScrollY = scrollY;
                     // sessionStorage.setItem("scroll", scrollY);
                     var data = {
-                        "url": url,
+                        "url": urlHash,
                         "position": currScrollY
                     };
                     sendPostRequest(data);
@@ -134,7 +147,7 @@ $(window).on('load', function() {
             currScrollY = window.scrollY;
             console.log('Scrolling ', currScrollY);
             var data = {
-                "url": url,
+                "url": urlHash,
                 "position": currScrollY
             };
             sendPostRequest(data);
