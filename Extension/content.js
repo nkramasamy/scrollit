@@ -111,7 +111,7 @@ $(window).on('load', function() {
                 $("#WACViewPanel").scroll(function() { //.box is the class of the div
                     var scrollY = $("#WACViewPanel").scrollTop();
                     console.log(scrollY);
-                    currScrollY = currScrollY;
+                    currScrollY = scrollY;
                     // sessionStorage.setItem("scroll", scrollY);
                     var data = {
                         "url": url,
