@@ -3,6 +3,7 @@ var g_postPath = "updatescrollposition/";
 var g_baseUrl = "https://scrollit.azurewebsites.net/";
 var g_urlFinal = "";
 
+/*
 function sendGetRequest(url, data) {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", g_baseUrl+g_getPath+url);
@@ -12,6 +13,7 @@ function sendGetRequest(url, data) {
         data = xhr.responseText;
     }
 };
+*/
 
 function getHash(urlStr) {
     var hash = 0;
@@ -46,18 +48,15 @@ $(window).on('load', function() {
     var host = window.location.host;
     var officeHosts = ["sharepoint.com", "office.net", "office.com", "officeapps.live.com"];
 
-    var url2 = (window.location != window.parent.location)
-            ? document.referrer
-            : document.location.href;
-
-    var childLoc = window.location;
+    /*var childLoc = window.location;
     var parentLoc = window.parent.location;
     while (parentLoc && (childLoc != parentLoc)) {
         childLoc = window.parent.location;
         parentLoc = window.parent.parent.location;
     }
-    g_urlFinal = childLoc.href;
-
+    g_urlFinal = childLoc.href;*/
+    g_urlFinal = url;
+    var pageTitle = document.title;
     var currScrollY = 0;
     var urlHash = getHash(g_urlFinal);
     console.log("urlHash ", urlHash);
@@ -67,21 +66,17 @@ $(window).on('load', function() {
     var isOfficeApp = false;
     for(var ohost of officeHosts)
     {
-        console.log("host", host, ' ohost ', ohost,  "url ", g_urlFinal);
-        var idx = g_urlFinal.search("sourcedoc=");
-        if (host.search(ohost) >= 0 && idx > 0) {
-            
-            var docUidStr = g_urlFinal.slice(idx);
-            var docUid = docUidStr.slice(0, docUidStr.search("&"));
-            urlHash = getHash(docUid);
-            console.log("OFFICE DOC", docUid);
-            if (g_urlFinal.search(".pptx") >= 0 || g_urlFinal.search("powerpoint") >= 0) {
+        if (host.search(ohost) >= 0) {
+            urlHash = getHash(pageTitle);
+            if (g_urlFinal.search(".ppt") >= 0 || g_urlFinal.search("powerpoint") >= 0 ||
+                pageTitle.search(".ppt") >= 0) {
                 isOfficeApp = true;
                 // Powerpoint
-                console.log("Loaded Powerpoint ", $("#EditingThumbnailsPanel"));
-
+                console.log("Loaded Powerpoint doc with title", pageTitle);
+                
                 if($("#EditingThumbnailsPanel") == null || $("#EditingThumbnailsPanel") == undefined)
                 {
+                    console.log("EditingThumbnailsPanel not found");
                     return;
                 }
 
@@ -100,10 +95,11 @@ $(window).on('load', function() {
             {
                 isOfficeApp = true;
                 // Word
-                console.log("Loaded Word ", $("#WACViewPanel"));
+                console.log("Loaded Word doc with title", pageTitle);
             
                 if($("#WACViewPanel") == null || $("#WACViewPanel") == undefined)
                 {
+                    console.log("WACViewPanel not found");
                     return;
                 }
             
@@ -147,43 +143,38 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     var host = window.location.host;
     var officeHosts = ["sharepoint.com", "office.net", "office.com", "officeapps.live.com"];
 
-    var url2 = (window.location != window.parent.location)
-            ? document.referrer
-            : document.location.href;
-
     var currScrollY = 0;
     var isOfficeApp = false;
     var urlHash = getHash(g_urlFinal);
+    var pageTitle = document.title;
 
     for(var ohost of officeHosts) {
-        console.log("host", host, ' ohost ', ohost,  "g_urlFinal ", g_urlFinal);
-        var idx = g_urlFinal.search("sourcedoc=");
-        if (host.search(ohost) >= 0 && idx > 0) {
+        if (host.search(ohost) >= 0) {
             isOfficeApp = true;
-            var docUidStr = g_urlFinal.slice(idx);
-            var docUid = docUidStr.slice(0, docUidStr.search("&"));
-            console.log("OFFICE DOC", docUid);
-            urlHash = getHash(docUid);
+            urlHash = getHash(pageTitle);
         }
     }
 
     console.log("addListener urlhash ", urlHash);
-    console.log("g_urlFinal parent", url2);
     var prevScrollY = 0;
-    // prevScrollY = parseFloat(sendGetRequest(urlHash));
     var xhr = new XMLHttpRequest();
     xhr.open("GET", g_baseUrl+g_getPath+urlHash);
     xhr.send();
     xhr.onreadystatechange = (e) => {
         prevScrollY = parseFloat(xhr.responseText);
-        console.log("GET result", xhr.responseText);
+        console.log("GET result", prevScrollY);
+        if (!prevScrollY) {
+            console.log("prevScrollY is null");
+            return;
+        }
 
         if (isOfficeApp) {
-            if (g_urlFinal.search(".pptx") >= 0 || g_urlFinal.search("powerpoint") >= 0) {
-                isOfficeApp = true;
+            if (g_urlFinal.search(".ppt") >= 0 || g_urlFinal.search("powerpoint") >= 0 ||
+                pageTitle.search(".ppt") >= 0) {
                 // Powerpoint
                 if($("#EditingThumbnailsPanel") == null || $("#EditingThumbnailsPanel") == undefined)
                 {
+                    console.log("EditingThumbnailsPanel not found");
                     return;
                 }
 
@@ -191,7 +182,7 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                 var arr = $("#EditingThumbnailsPanel").children().children();
                 var selectedSlideIdx = 0;
                 var currPosPpt = prevScrollY; // sessionStorage.getItem("scrollPpt");
-                if (arr != null && currPosPpt != null)
+                if (arr && currPosPpt && currPosPpt > 0)
                 {
                     console.log("currPosPpt: ", currPosPpt);
                     for(selectedSlideIdx = 0; selectedSlideIdx < arr.length; selectedSlideIdx++) {
@@ -202,16 +193,19 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
                             break;
                         }
                     }
+
+                    if (!arr[selectedSlideIdx+1]) console.log("array is null");
+
                     console.log("Selected selectedSlideIdx", selectedSlideIdx+1);
-                    if (arr[selectedSlideIdx+1]) arr[selectedSlideIdx+1].click();
+                    arr[selectedSlideIdx+1].click();
                 }
             }
             else // if (g_urlFinal.search(".docx") >= 0)
             {
-                isOfficeApp = true;
                 // Word
                 if($("#WACViewPanel") == null || $("#WACViewPanel") == undefined)
                 {
+                    console.log("WACViewPanel not found");
                     return;
                 }
             
